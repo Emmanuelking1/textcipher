@@ -1,0 +1,263 @@
+#!/bin/bash
+
+# Script to create textcipher project structure and ZIP file
+
+# Create main directory
+mkdir -p textcipher/textcipher textcipher/tests
+
+# Create .gitignore
+cat > textcipher/.gitignore << 'EOF'
+__pycache__/
+*.pyc
+dist/
+build/
+*.egg-info/
+EOF
+
+# Create LICENSE
+cat > textcipher/LICENSE << 'EOF'
+MIT License
+
+Copyright (c) 2025 Emmanuelking
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+EOF
+
+# Create README.md
+cat > textcipher/README.md << 'EOF'
+# TextCipher
+
+A dependency-free Python CLI tool for encrypting and decrypting text using Caesar and Vigenère ciphers.
+
+## Installation
+```bash
+pip install textcipher
+```
+
+## Usage
+```bash
+textcipher "text" [--cipher {caesar,vigenere}] [--mode {encrypt,decrypt}] [--shift SHIFT] [--key KEY]
+```
+
+### Examples
+```bash
+# Encrypt with Caesar cipher (default, shift=3)
+textcipher "hello"
+
+# Decrypt with Caesar cipher
+textcipher "khoor" --mode decrypt --shift 3
+
+# Encrypt with Vigenère cipher
+textcipher "hello" --cipher vigenere --key lemon
+
+# Decrypt with Vigenère cipher
+textcipher "rijvs" --cipher vigenere --mode decrypt --key key
+```
+
+## Features
+- No dependencies, uses Python standard library.
+- Supports Caesar and Vigenère ciphers.
+- Simple CLI for encryption and decryption.
+
+## License
+MIT License
+
+## Contributing
+Contributions welcome! Open an issue or pull request on [GitHub](https://github.com/JuniorEfik/textcipher).
+EOF
+
+# Create pyproject.toml
+cat > textcipher/pyproject.toml << 'EOF'
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "textcipher"
+version = "0.1.0"
+authors = [
+  { name = "Emmanuelking", email = "emmanuelking@example.com" },
+]
+description = "A dependency-free Python CLI tool for text encryption and decryption."
+readme = "README.md"
+requires-python = ">=3.6"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+EOF
+
+# Create setup.cfg
+cat > textcipher/setup.cfg << 'EOF'
+[metadata]
+name = textcipher
+version = 0.1.0
+author = Emmanuelking
+author_email = emmanuelking@example.com
+description = A dependency-free Python CLI tool for text encryption and decryption.
+long_description = file: README.md
+long_description_content_type = text/markdown
+url = https://github.com/JuniorEfik/textcipher
+classifiers =
+    Programming Language :: Python :: 3
+    License :: OSI Approved :: MIT License
+    Operating System :: OS Independent
+
+[options]
+package_dir =
+    = textcipher
+packages = find:
+python_requires = >=3.6
+
+[options.entry_points]
+console_scripts =
+    textcipher = textcipher.cipher:main
+EOF
+
+# Create textcipher/__init__.py
+cat > textcipher/textcipher/__init__.py << 'EOF'
+__version__ = "0.1.0"
+EOF
+
+# Create textcipher/cipher.py
+cat > textcipher/textcipher/cipher.py << 'EOF'
+import argparse
+import sys
+import string
+
+def caesar_encrypt(text: str, shift: int) -> str:
+    """Encrypt text using Caesar cipher with given shift."""
+    alphabet = string.ascii_lowercase
+    shifted = alphabet[shift % 26:] + alphabet[:shift % 26]
+    trans = str.maketrans(alphabet, shifted)
+    return text.lower().translate(trans)
+
+def caesar_decrypt(text: str, shift: int) -> str:
+    """Decrypt text using Caesar cipher with given shift."""
+    return caesar_encrypt(text, -shift)
+
+def vigenere_encrypt(text: str, key: str) -> str:
+    """Encrypt text using Vigenère cipher with given key."""
+    alphabet = string.ascii_lowercase
+    text = text.lower()
+    key = key.lower()
+    result = []
+    key_idx = 0
+    for char in text:
+        if char in alphabet:
+            shift = alphabet.index(key[key_idx % len(key)])
+            result.append(caesar_encrypt(char, shift))
+            key_idx += 1
+        else:
+            result.append(char)
+    return ''.join(result)
+
+def vigenere_decrypt(text: str, key: str) -> str:
+    """Decrypt text using Vigenère cipher with given key."""
+    alphabet = string.ascii_lowercase
+    text = text.lower()
+    key = key.lower()
+    result = []
+    key_idx = 0
+    for char in text:
+        if char in alphabet:
+            shift = alphabet.index(key[key_idx % len(key)])
+            result.append(caesar_decrypt(char, shift))
+            key_idx += 1
+        else:
+            result.append(char)
+    return ''.join(result)
+
+def main():
+    """CLI entry point for textcipher."""
+    parser = argparse.ArgumentParser(
+        description="Encrypt or decrypt text using Caesar or Vigenère ciphers."
+    )
+    parser.add_argument(
+        "text", help="Text to encrypt or decrypt."
+    )
+    parser.add_argument(
+        "--cipher", choices=["caesar", "vigenere"], default="caesar",
+        help="Cipher to use (default: caesar)."
+    )
+    parser.add_argument(
+        "--mode", choices=["encrypt", "decrypt"], default="encrypt",
+        help="Mode: encrypt or decrypt (default: encrypt)."
+    )
+    parser.add_argument(
+        "--shift", type=int, default=3,
+        help="Shift value for Caesar cipher (default: 3)."
+    )
+    parser.add_argument(
+        "--key", default="key",
+        help="Key for Vigenère cipher (default: 'key')."
+    )
+    args = parser.parse_args()
+
+    try:
+        if args.cipher == "caesar":
+            if args.mode == "encrypt":
+                result = caesar_encrypt(args.text, args.shift)
+            else:
+                result = caesar_decrypt(args.text, args.shift)
+        else:  # vigenere
+            if not args.key.isalpha():
+                raise ValueError("Vigenère key must contain only letters.")
+            if args.mode == "encrypt":
+                result = vigenere_encrypt(args.text, args.key)
+            else:
+                result = vigenere_decrypt(args.text, args.key)
+        print(result)
+    except ValueError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
+
+if __name__ == "__main__":
+    main()
+EOF
+
+# Create tests/test_cipher.py
+cat > textcipher/tests/test_cipher.py << 'EOF'
+from textcipher.cipher import caesar_encrypt, caesar_decrypt, vigenere_encrypt, vigenere_decrypt
+
+def test_caesar():
+    assert caesar_encrypt("hello", 3) == "khoor"
+    assert caesar_decrypt("khoor", 3) == "hello"
+    assert caesar_encrypt("xyz", 3) == "abc"
+    assert caesar_encrypt("hello", 29) == "khoor"  # 29 % 26 = 3
+
+def test_vigenere():
+    assert vigenere_encrypt("hello", "key") == "rijvs"
+    assert vigenere_decrypt("rijvs", "key") == "hello"
+    assert vigenere_encrypt("attack at dawn", "lemon") == "lxfopv ef rhav"
+
+def run_tests():
+    test_caesar()
+    test_vigenere()
+    print("All tests passed!")
+
+if __name__ == "__main__":
+    run_tests()
+EOF
+
+# Create ZIP file
+zip -r textcipher.zip textcipher/
+
+echo "textcipher.zip created successfully!"
